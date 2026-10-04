@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>🚨 Punctuation Rescue Mission - Year 5 English 🚨</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- MediaPipe Libraries for AI Hand Tracking -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+  <!-- Google Fonts: Fredoka & Comic Neue -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:ital,wght@0,400;0,700;1,400&family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            comic: ['"Comic Neue"', 'Comic Sans MS', 'Comic Sans', 'Arial', 'sans-serif'],
+            fredoka: ['Fredoka', '"Comic Neue"', 'sans-serif']
+          },
+          colors: {
+            rescueRed: '#EF4444',
+            rescueYellow: '#F59E0B',
+            rescueBlue: '#2563EB',
+            rescueGreen: '#10B981',
+            rescueDark: '#0F172A'
+          },
+          animation: {
+            'bounce-short': 'bounce 0.8s ease-in-out 2',
+            'pulse-glow': 'pulseGlow 2s infinite',
+            'float': 'float 3s ease-in-out infinite'
+          },
+          keyframes: {
+            pulseGlow: {
+              '0%, 100%': { boxShadow: '0 0 15px rgba(239, 68, 68, 0.4)' },
+              '50%': { boxShadow: '0 0 25px rgba(245, 158, 11, 0.8)' }
+            },
+            float: {
+              '0%, 100%': { transform: 'translateY(0px)' },
+              '50%': { transform: 'translateY(-8px)' }
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Comic Neue', 'Comic Sans MS', Arial, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+      min-height: 100vh;
+      color: #f8fafc;
+      user-select: none;
+    }
+
+    /* Video Mirroring for natural gesture orientation */
+    .mirror-view {
+      transform: scaleX(-1);
+    }
+
+    /* Custom styled scrollbars */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #3b82f6;
+      border-radius: 4px;
+    }
+
+    .badge-pop {
+      animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes pop {
+      0% { transform: scale(0.5); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+  </style>
+</head>
+<body class="flex flex-col min-h-screen text-slate-100 overflow-x-hidden">
+
+  <header class="bg-slate-900/90 border-b border-slate-700 backdrop-blur-md sticky top-0 z-40 px-4 py-3">
+    <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-3">
+      
+      <!-- Logo & Title -->
+      <div class="flex items-center space-x-3 cursor-pointer" onclick="showScreen('start-screen')">
+        <div class="bg-red-600 p-2 rounded-xl text-2xl shadow-lg shadow-red-500/30 animate-pulse">
+          🚨
+        </div>
+        <div>
+          <h1 class="font-fredoka text-xl md:text-2xl font-bold tracking-wide text-amber-400 leading-tight">
+            PUNCTUATION RESCUE MISSION
+          </h1>
+          <p class="text-xs text-slate-400 font-semibold">Year 5 English DSKP 4.3.1 • Primary School Edition</p>
+        </div>
+      </div>
+
+      <!-- Live Score & Progress Stats Header -->
+      <div id="top-stats-bar" class="hidden md:flex items-center gap-4 bg-slate-800/80 px-4 py-1.5 rounded-full border border-slate-700">
+        <div class="flex items-center space-x-1.5">
+          <span class="text-xs font-bold text-slate-400 uppercase">Score:</span>
+          <span id="score-display" class="font-fredoka text-lg font-bold text-emerald-400">0</span>
+        </div>
+        <div class="h-4 w-[1px] bg-slate-700"></div>
+        <div class="flex items-center space-x-1.5">
+          <span class="text-xs font-bold text-slate-400 uppercase">Rescued:</span>
+          <span id="rescued-count-display" class="font-fredoka text-lg font-bold text-amber-400">0 / 8</span>
+        </div>
+        <div class="h-4 w-[1px] bg-slate-700"></div>
+        <div class="flex items-center space-x-1.5">
+          <span class="text-xs font-bold text-slate-400 uppercase">Accuracy:</span>
+          <span id="accuracy-display" class="font-fredoka text-lg font-bold text-sky-400">100%</span>
+        </div>
+      </div>
+
+      <!-- Header Action Buttons -->
+      <div class="flex items-center gap-2">
+        <button id="sound-btn" onclick="toggleAudio()" title="Toggle Audio SFX" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 transition text-sm flex items-center gap-1">
+          <span id="sound-icon">🔊</span>
+        </button>
+
+        <button id="input-mode-btn" onclick="toggleInputMode()" class="px-3 py-2 rounded-xl bg-blue-600/80 hover:bg-blue-600 border border-blue-400/40 text-xs font-bold flex items-center gap-1.5 transition">
+          <span id="mode-icon">📷</span>
+          <span id="mode-text" class="hidden sm:inline">Camera Mode</span>
+        </button>
+
+        <button onclick="openTeacherModal()" class="px-3 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-300 text-xs font-bold flex items-center gap-1 transition">
+          <span>👩‍🏫</span>
+          <span>Teacher Mode</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 relative flex flex-col justify-center">
+
+    <!-- 1. START SCREEN -->
+    <section id="start-screen" class="space-y-8 max-w-4xl mx-auto w-full my-auto py-6">
+      <div class="text-center space-y-4">
+        <div class="inline-block bg-red-500/20 text-red-300 border border-red-500/40 px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase mb-2">
+          🚨 Emergency Alert: Sentences Need Help!
+        </div>
+        <h2 class="font-fredoka text-4xl md:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-red-400 to-sky-400 leading-tight">
+          PUNCTUATION RESCUE MISSION
+        </h2>
+        <p class="text-slate-300 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
+          Save broken sentences! Select words and use physical AI hand gestures or buttons to fix Capital Letters, Full Stops, Commas, and Question Marks!
+        </p>
+      </div>
+
+      <!-- Mission Difficulty Selector -->
+      <div class="bg-slate-800/80 p-6 rounded-2xl border border-slate-700 shadow-xl space-y-4 backdrop-blur">
+        <h3 class="font-fredoka text-lg text-amber-300 flex items-center gap-2">
+          <span>🎯</span> Select Mission Level:
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <button onclick="selectLevel(1)" id="lvl-1-btn" class="level-select-btn p-4 rounded-xl border-2 border-emerald-500 bg-emerald-950/40 hover:bg-emerald-900/60 transition text-left space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-emerald-400">🟢 LEVEL 1</span>
+              <span class="text-xs bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded">FIND IT</span>
+            </div>
+            <p class="text-xs text-slate-300">Single errors per sentence. Focus on Capital Letters & Full Stops.</p>
+          </button>
+
+          <button onclick="selectLevel(2)" id="lvl-2-btn" class="level-select-btn p-4 rounded-xl border-2 border-slate-700 bg-slate-900/50 hover:bg-slate-800/70 transition text-left space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-amber-400">🟡 LEVEL 2</span>
+              <span class="text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded">FIX IT</span>
+            </div>
+            <p class="text-xs text-slate-300">1-2 errors per sentence. Adds Commas in lists & Question Marks.</p>
+          </button>
+
+          <button onclick="selectLevel(3)" id="lvl-3-btn" class="level-select-btn p-4 rounded-xl border-2 border-slate-700 bg-slate-900/50 hover:bg-slate-800/70 transition text-left space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-rose-400">🔴 LEVEL 3</span>
+              <span class="text-xs bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded">RESCUE IT</span>
+            </div>
+            <p class="text-xs text-slate-300">Multiple mixed errors per sentence needing complete rescue.</p>
+          </button>
+        </div>
+      </div>
+
+      <!-- Gesture Control Reference Card -->
+      <div class="bg-slate-900/80 p-5 rounded-2xl border border-slate-800 space-y-3">
+        <h4 class="font-fredoka text-sm uppercase text-slate-400 tracking-wider">🖐️ Rescue Action Controls</h4>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+          <div class="p-3 bg-slate-800/60 rounded-xl border border-slate-700/60">
+            <div class="text-3xl mb-1">☝️</div>
+            <div class="text-xs font-bold text-amber-300">1 Finger</div>
+            <div class="text-[11px] text-slate-400">Capital Letter</div>
+          </div>
+          <div class="p-3 bg-slate-800/60 rounded-xl border border-slate-700/60">
+            <div class="text-3xl mb-1">✊</div>
+            <div class="text-xs font-bold text-rose-300">Closed Fist</div>
+            <div class="text-[11px] text-slate-400">Full Stop (.)</div>
+          </div>
+          <div class="p-3 bg-slate-800/60 rounded-xl border border-slate-700/60">
+            <div class="text-3xl mb-1">✌️</div>
+            <div class="text-xs font-bold text-emerald-300">2 Fingers</div>
+            <div class="text-[11px] text-slate-400">Comma (,)</div>
+          </div>
+          <div class="p-3 bg-slate-800/60 rounded-xl border border-slate-700/60">
+            <div class="text-3xl mb-1">👍</div>
+            <div class="text-xs font-bold text-sky-300">Thumbs Up</div>
+            <div class="text-[11px] text-slate-400">Question Mark (?)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Start Mission Buttons -->
+      <div class="flex flex-col sm:flex-row gap-4 justify-center items-center pt-2">
+        <button onclick="startMission()" class="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-red-600 via-amber-600 to-emerald-600 hover:from-red-500 hover:to-emerald-500 text-white font-fredoka text-xl font-bold rounded-2xl shadow-xl shadow-red-900/30 transition transform hover:-translate-y-1 active:translate-y-0 flex items-center justify-center gap-3">
+          <span>🚀</span> START RESCUE MISSION
+        </button>
+        <button onclick="openTeacherModal()" class="w-full sm:w-auto px-6 py-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-2xl border border-slate-600 transition flex items-center justify-center gap-2">
+          <span>📊</span> VIEW PROGRESS
+        </button>
+      </div>
+    </section>
+
+    <!-- 2. GAMEPLAY SCREEN (RESCUE MISSION) -->
+    <section id="game-screen" class="hidden space-y-6">
+      
+      <!-- Progress Bar & Mission Header -->
+      <div class="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div class="flex items-center gap-3 w-full md:w-auto">
+          <span class="bg-red-500/20 text-red-400 font-bold px-3 py-1 rounded-lg text-sm border border-red-500/30" id="mission-tag">
+            MISSION 1 / 8
+          </span>
+          <span id="target-punctuation-badge" class="bg-amber-500/20 text-amber-300 text-xs font-bold px-3 py-1 rounded-lg border border-amber-500/30">
+            Target: Capital Letter & Full Stop
+          </span>
+        </div>
+
+        <!-- Progress Track -->
+        <div class="w-full md:w-1/2 flex items-center gap-3">
+          <div class="flex-1 bg-slate-800 h-3.5 rounded-full overflow-hidden border border-slate-700">
+            <div id="mission-progress-bar" class="bg-gradient-to-r from-red-500 via-amber-400 to-emerald-400 h-full transition-all duration-500 w-[12.5%]"></div>
+          </div>
+          <span id="mission-progress-text" class="text-xs font-bold text-slate-400 min-w-[3rem] text-right">1 / 8</span>
+        </div>
+      </div>
+
+      <!-- Gameplay Grid: Camera Left, Sentence Card Right -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+        <!-- CAMERA / HAND TRACKING PANEL (5 cols) -->
+        <div id="camera-panel" class="lg:col-span-5 bg-slate-900/90 rounded-2xl border border-slate-800 p-4 space-y-3 shadow-xl">
+          <div class="flex justify-between items-center">
+            <h3 class="font-fredoka text-sm text-slate-300 flex items-center gap-2">
+              <span>📷</span> LIVE AI HAND SENSOR
+            </h3>
+            <span id="hand-status-badge" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+              Initializing...
+            </span>
+          </div>
+
+          <!-- Video Canvas Container -->
+          <div class="relative aspect-video rounded-xl overflow-hidden bg-slate-950 border border-slate-800 shadow-inner flex items-center justify-center">
+            <video id="webcam" class="hidden" playsinline></video>
+            <canvas id="output-canvas" class="w-full h-full object-cover mirror-view"></canvas>
+            
+            <!-- Gesture Overlay Banner -->
+            <div id="detected-gesture-overlay" class="absolute bottom-3 left-3 right-3 bg-slate-900/90 backdrop-blur border border-slate-700 p-2.5 rounded-xl flex items-center justify-between text-xs transition-all duration-200 opacity-90">
+              <span class="text-slate-400 font-semibold">Detected Action:</span>
+              <span id="detected-action-text" class="font-fredoka font-bold text-amber-400 text-sm flex items-center gap-1">
+                ✋ Waiting for Hand...
+              </span>
+            </div>
+
+            <!-- Fallback Overlay when Camera Disabled -->
+            <div id="camera-disabled-overlay" class="hidden absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center p-4 text-center space-y-2">
+              <div class="text-4xl">🖱️</div>
+              <p class="text-sm font-bold text-slate-300">Click Mode Active</p>
+              <p class="text-xs text-slate-400">Click a word, then use the action buttons below.</p>
+            </div>
+          </div>
+
+          <!-- Action Control Cheat Sheet Box -->
+          <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-2 text-xs">
+            <div class="font-bold text-amber-400 uppercase tracking-wider text-[10px]">🖐 Your Punctuation Actions</div>
+            <div class="grid grid-cols-2 gap-2 text-slate-300">
+              <div class="flex items-center gap-2 bg-slate-900/80 p-1.5 rounded border border-slate-800">
+                <span class="text-base">☝️</span>
+                <span><strong>1 Finger:</strong> Capital</span>
+              </div>
+              <div class="flex items-center gap-2 bg-slate-900/80 p-1.5 rounded border border-slate-800">
+                <span class="text-base">✊</span>
+                <span><strong>Fist:</strong> Full Stop</span>
+              </div>
+              <div class="flex items-center gap-2 bg-slate-900/80 p-1.5 rounded border border-slate-800">
+                <span class="text-base">✌️</span>
+                <span><strong>2 Fingers:</strong> Comma</span>
+              </div>
+              <div class="flex items-center gap-2 bg-slate-900/80 p-1.5 rounded border border-slate-800">
+                <span class="text-base">👍</span>
+                <span><strong>Thumbs Up:</strong> Question</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SENTENCE REPAIR PANEL (7 cols) -->
+        <div class="lg:col-span-7 space-y-4">
+
+          <!-- Emergency Alert Box -->
+          <div id="sentence-card" class="bg-slate-900/90 rounded-2xl border-2 border-red-500/50 p-6 shadow-xl space-y-6 relative overflow-hidden transition-all duration-300">
+            
+            <div class="flex justify-between items-start gap-2">
+              <div>
+                <span class="text-xs font-bold uppercase tracking-wider text-red-400 bg-red-500/10 px-2.5 py-1 rounded-md border border-red-500/20">
+                  🚨 PUNCTUATION EMERGENCY!
+                </span>
+                <p id="emergency-prompt" class="text-sm text-slate-300 mt-2 font-semibold">
+                  OH NO! This sentence has punctuation problems! Can you rescue it?
+                </p>
+              </div>
+              <div id="difficulty-indicator" class="text-xs font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-md border border-amber-500/20">
+                Level 1
+              </div>
+            </div>
+
+            <!-- Broken Sentence Display Box -->
+            <div class="bg-slate-950/80 p-6 rounded-xl border border-slate-800 min-h-[110px] flex flex-col items-center justify-center text-center gap-2">
+              <span class="text-xs text-slate-400 font-semibold">Click/Tap a word to select, then apply action:</span>
+              <div id="sentence-words-container" class="text-2xl sm:text-3xl md:text-4xl font-fredoka tracking-wide leading-relaxed text-slate-100 flex flex-wrap justify-center gap-2 items-center">
+                <!-- Words injected dynamically -->
+              </div>
+            </div>
+
+            <!-- Manual Action Buttons (Touch / Mouse Friendly) -->
+            <div class="space-y-2">
+              <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Select Action to Apply to Selected Word:
+              </div>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <button onclick="applyPunctuationAction('CAPITAL')" class="action-btn p-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-300 font-bold text-sm flex flex-col items-center gap-1 transition active:scale-95">
+                  <span class="text-2xl">☝️</span>
+                  <span>CAPITAL</span>
+                </button>
+                <button onclick="applyPunctuationAction('FULL_STOP')" class="action-btn p-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/50 text-rose-300 font-bold text-sm flex flex-col items-center gap-1 transition active:scale-95">
+                  <span class="text-2xl">✊</span>
+                  <span>FULL STOP</span>
+                </button>
+                <button onclick="applyPunctuationAction('COMMA')" class="action-btn p-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/50 text-emerald-300 font-bold text-sm flex flex-col items-center gap-1 transition active:scale-95">
+                  <span class="text-2xl">✌️</span>
+                  <span>COMMA</span>
+                </button>
+                <button onclick="applyPunctuationAction('QUESTION')" class="action-btn p-3 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/50 text-sky-300 font-bold text-sm flex flex-col items-center gap-1 transition active:scale-95">
+                  <span class="text-2xl">👍</span>
+                  <span>QUESTION</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Feedback Modal Banner -->
+            <div id="game-feedback-banner" class="hidden p-4 rounded-xl border flex items-center gap-3 text-sm font-bold transition-all">
+              <span id="feedback-icon" class="text-2xl">🔎</span>
+              <div id="feedback-text" class="flex-1">Almost there! Select the word needing punctuation fix.</div>
+            </div>
+          </div>
+
+          <!-- PRODUCTION STEP: WRITE TO RESCUE (NOW YOU TRY!) -->
+          <div id="guided-writing-card" class="hidden bg-slate-900/90 rounded-2xl border-2 border-emerald-500/50 p-6 shadow-xl space-y-4">
+            <div class="flex items-center gap-2">
+              <span class="text-2xl">✍️</span>
+              <div>
+                <h4 class="font-fredoka text-lg text-emerald-400 font-bold">NOW YOU TRY! (Application Task)</h4>
+                <p id="guided-prompt-text" class="text-xs text-slate-300">
+                  Write your own sentence using a list of fruits with correct punctuation.
+                </p>
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <input type="text" id="guided-user-input" placeholder="Type your sentence here..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-slate-100 placeholder-slate-500 focus:border-emerald-500 focus:outline-none font-comic text-base">
+              
+              <div class="flex justify-between items-center text-xs text-slate-400">
+                <span>Checklist: Capital letter, Commas, Full stop</span>
+                <button onclick="submitGuidedWriting()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow transition flex items-center gap-1.5">
+                  <span>Submit Sentence</span>
+                  <span>🚀</span>
+                </button>
+              </div>
+            </div>
+
+            <div id="guided-feedback" class="hidden p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs space-y-1">
+              <!-- Evaluation details -->
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 3. FINAL MISSION: INDEPENDENT WRITING -->
+    <section id="final-mission-screen" class="hidden space-y-6 max-w-4xl mx-auto w-full py-4">
+      
+      <div class="bg-gradient-to-r from-amber-900/40 via-red-900/40 to-indigo-900/40 border-2 border-amber-500/60 rounded-3xl p-6 md:p-8 shadow-2xl space-y-6">
+        
+        <div class="text-center space-y-2">
+          <span class="bg-amber-500/20 text-amber-300 font-bold px-4 py-1 rounded-full text-xs border border-amber-500/40 uppercase tracking-wider">
+            🏆 FINAL MISSION - INDEPENDENT WRITING
+          </span>
+          <h2 class="font-fredoka text-3xl md:text-4xl text-amber-400 font-extrabold">
+            Punctuation Hero Masterclass
+          </h2>
+          <p class="text-slate-300 text-sm md:text-base max-w-xl mx-auto">
+            Write 4 to 5 sentences about your favourite weekend activity or trip. Apply all the punctuation skills you've rescued!
+          </p>
+        </div>
+
+        <!-- Checklist Box -->
+        <div class="bg-slate-950/80 rounded-2xl p-4 border border-slate-800 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+          <div class="flex items-center gap-2 text-amber-300">
+            <span>☑</span> <span>Capital letters</span>
+          </div>
+          <div class="flex items-center gap-2 text-rose-300">
+            <span>☑</span> <span>Full stops (.)</span>
+          </div>
+          <div class="flex items-center gap-2 text-emerald-300">
+            <span>☑</span> <span>Commas in lists (,)</span>
+          </div>
+          <div class="flex items-center gap-2 text-sky-300">
+            <span>☑</span> <span>Question marks (?)</span>
+          </div>
+        </div>
+
+        <!-- Essay Text Area -->
+        <div class="space-y-3">
+          <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+            Your Paragraph (4-5 Sentences):
+          </label>
+          <textarea id="final-writing-input" rows="6" placeholder="Example: Last Saturday, I went to the park with my family. We played football and ate sandwiches. I brought apples, biscuits, and juice. Did I enjoy the day? Yes, I did!" class="w-full bg-slate-950 border border-slate-700 rounded-2xl p-4 text-slate-100 placeholder-slate-600 focus:border-amber-500 focus:outline-none font-comic text-base leading-relaxed"></textarea>
+        </div>
+
+        <!-- Interactive Evaluation Box -->
+        <div id="final-eval-box" class="hidden bg-slate-900/90 rounded-2xl border border-slate-700 p-5 space-y-3">
+          <h4 class="font-fredoka text-sm text-amber-400 font-bold flex items-center gap-2">
+            <span>🤖</span> PUNCTUATION ANALYZER FEEDBACK
+          </h4>
+          <div id="final-eval-details" class="space-y-2 text-xs text-slate-300">
+            <!-- Dynamic criteria check items -->
+          </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="flex justify-end gap-4">
+          <button onclick="evaluateFinalWriting()" class="px-8 py-4 bg-gradient-to-r from-amber-500 to-emerald-600 hover:from-amber-400 hover:to-emerald-500 text-white font-fredoka text-lg font-bold rounded-2xl shadow-xl transition transform hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2">
+            <span>COMPLETE MISSION</span>
+            <span>🏆</span>
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 4. RESULTS SCREEN -->
+    <section id="results-screen" class="hidden space-y-6 max-w-4xl mx-auto w-full py-6 text-center">
+      
+      <div class="bg-slate-900/90 border-2 border-amber-500/50 rounded-3xl p-6 md:p-10 shadow-2xl space-y-8 backdrop-blur">
+        
+        <div class="space-y-3">
+          <div class="text-6xl animate-bounce-short">🎉</div>
+          <h2 class="font-fredoka text-4xl md:text-5xl text-amber-400 font-extrabold">
+            MISSION COMPLETED!
+          </h2>
+          <p id="results-subtitle" class="text-slate-300 text-base md:text-lg max-w-md mx-auto">
+            Great job! You are becoming an official Punctuation Expert!
+          </p>
+        </div>
+
+        <!-- Summary Score Card Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="bg-slate-950/80 p-4 rounded-2xl border border-slate-800 space-y-1">
+            <span class="text-xs text-slate-400 uppercase font-bold">Total Score</span>
+            <div id="res-score" class="font-fredoka text-3xl font-extrabold text-amber-400">0</div>
+          </div>
+          <div class="bg-slate-950/80 p-4 rounded-2xl border border-slate-800 space-y-1">
+            <span class="text-xs text-slate-400 uppercase font-bold">Rescued</span>
+            <div id="res-rescued" class="font-fredoka text-3xl font-extrabold text-emerald-400">8 / 8</div>
+          </div>
+          <div class="bg-slate-950/80 p-4 rounded-2xl border border-slate-800 space-y-1">
+            <span class="text-xs text-slate-400 uppercase font-bold">Accuracy</span>
+            <div id="res-accuracy" class="font-fredoka text-3xl font-extrabold text-sky-400">100%</div>
+          </div>
+          <div class="bg-slate-950/80 p-4 rounded-2xl border border-slate-800 space-y-1">
+            <span class="text-xs text-slate-400 uppercase font-bold">Writing Score</span>
+            <div id="res-writing" class="font-fredoka text-3xl font-extrabold text-rose-400">85%</div>
+          </div>
+        </div>
+
+        <!-- Breakdown by Skill -->
+        <div class="bg-slate-950/60 p-5 rounded-2xl border border-slate-800 text-left space-y-3">
+          <h4 class="font-fredoka text-sm uppercase tracking-wider text-slate-400 font-bold">
+            📊 Skill Breakdown Accuracy
+          </h4>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+            <div class="space-y-1">
+              <div class="flex justify-between">
+                <span class="text-amber-300 font-bold">☝️ Capital Letters:</span>
+                <span id="stat-cap-acc" class="font-bold">90%</span>
+              </div>
+              <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                <div id="bar-cap-acc" class="bg-amber-400 h-full w-[90%]"></div>
+              </div>
+            </div>
+
+            <div class="space-y-1">
+              <div class="flex justify-between">
+                <span class="text-rose-300 font-bold">✊ Full Stops:</span>
+                <span id="stat-fs-acc" class="font-bold">85%</span>
+              </div>
+              <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                <div id="bar-fs-acc" class="bg-rose-400 h-full w-[85%]"></div>
+              </div>
+            </div>
+
+            <div class="space-y-1">
+              <div class="flex justify-between">
+                <span class="text-emerald-300 font-bold">✌️ Commas in Lists:</span>
+                <span id="stat-comma-acc" class="font-bold">75%</span>
+              </div>
+              <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                <div id="bar-comma-acc" class="bg-emerald-400 h-full w-[75%]"></div>
+              </div>
+            </div>
+
+            <div class="space-y-1">
+              <div class="flex justify-between">
+                <span class="text-sky-300 font-bold">👍 Question Marks:</span>
+                <span id="stat-qm-acc" class="font-bold">90%</span>
+              </div>
+              <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                <div id="bar-qm-acc" class="bg-sky-400 h-full w-[90%]"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Options -->
+        <div class="flex flex-col sm:flex-row justify-center gap-4 pt-2">
+          <button onclick="startMission()" class="px-8 py-4 bg-gradient-to-r from-emerald-600 to-sky-600 hover:from-emerald-500 hover:to-sky-500 text-white font-fredoka text-lg font-bold rounded-2xl shadow-xl transition transform hover:-translate-y-0.5">
+            🔄 REPLAY MISSION
+          </button>
+          <button onclick="openTeacherModal()" class="px-6 py-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-2xl border border-slate-700 transition">
+            👩‍‍🏫 TEACHER DASHBOARD
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 5. TEACHER MODE MODAL -->
+  <div id="teacher-modal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6 md:p-8 space-y-6 shadow-2xl">
+      
+      <div class="flex justify-between items-center border-b border-slate-800 pb-4">
+        <div class="flex items-center gap-3">
+          <span class="text-3xl">👩‍🏫</span>
+          <div>
+            <h3 class="font-fredoka text-xl text-amber-400 font-bold">TEACHER DASHBOARD</h3>
+            <p class="text-xs text-slate-400">Class Punctuation Performance & Settings</p>
+          </div>
+        </div>
+        <button onclick="closeTeacherModal()" class="text-slate-400 hover:text-slate-200 text-2xl font-bold p-1">
+          ✕
+        </button>
+      </div>
+
+      <!-- Class Performance Table -->
+      <div class="space-y-3">
+        <h4 class="font-fredoka text-sm uppercase text-slate-300 tracking-wider">CLASS PUNCTUATION PERFORMANCE</h4>
+        <div class="bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-slate-900 text-slate-400 uppercase font-semibold">
+              <tr>
+                <th class="p-3">Skill / Focus</th>
+                <th class="p-3">Target Standard</th>
+                <th class="p-3 text-right">Accuracy Rate</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800 font-comic text-sm">
+              <tr>
+                <td class="p-3 flex items-center gap-2"><span>☝️</span> Capital Letters</td>
+                <td class="p-3 text-slate-400 text-xs">Start of sentence & Proper Nouns</td>
+                <td id="teacher-cap-acc" class="p-3 text-right font-bold text-amber-400">85%</td>
+              </tr>
+              <tr>
+                <td class="p-3 flex items-center gap-2"><span>✊</span> Full Stops</td>
+                <td class="p-3 text-slate-400 text-xs">Sentence Endings</td>
+                <td id="teacher-fs-acc" class="p-3 text-right font-bold text-rose-400">78%</td>
+              </tr>
+              <tr>
+                <td class="p-3 flex items-center gap-2"><span>✌️️</span> Commas in Lists</td>
+                <td class="p-3 text-slate-400 text-xs">Listing items</td>
+                <td id="teacher-comma-acc" class="p-3 text-right font-bold text-emerald-400">65%</td>
+              </tr>
+              <tr>
+                <td class="p-3 flex items-center gap-2"><span>👍</span> Question Marks</td>
+                <td class="p-3 text-slate-400 text-xs">Interrogative Sentences</td>
+                <td id="teacher-qm-acc" class="p-3 text-right font-bold text-sky-400">82%</td>
+              </tr>
+              <tr>
+                <td class="p-3 flex items-center gap-2"><span>✍️</span> Independent Writing</td>
+                <td class="p-3 text-slate-400 text-xs">4.3.1 Application Level</td>
+                <td id="teacher-writing-acc" class="p-3 text-right font-bold text-purple-400">74%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Quick Controls & Toggles -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+        <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
+          <h5 class="text-xs font-bold text-slate-400 uppercase">Configuration Settings</h5>
+          <div class="space-y-2 text-xs">
+            <label class="flex items-center justify-between cursor-pointer">
+              <span>Enable AI Camera Input</span>
+              <input type="checkbox" id="teacher-toggle-camera" onchange="toggleCameraFromTeacher(this.checked)" checked class="rounded border-slate-700 text-amber-500 focus:ring-amber-500 w-4 h-4">
+            </label>
+            <label class="flex items-center justify-between cursor-pointer">
+              <span>Sound Effects (Web Audio API)</span>
+              <input type="checkbox" id="teacher-toggle-sound" onchange="toggleAudioFromTeacher(this.checked)" checked class="rounded border-slate-700 text-amber-500 focus:ring-amber-500 w-4 h-4">
+            </label>
+          </div>
+        </div>
+
+        <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
+          <h5 class="text-xs font-bold text-slate-400 uppercase">Data & Storage</h5>
+          <p class="text-xs text-slate-400">All student attempts and score histories are stored locally in the browser.</p>
+          <button onclick="resetStudentData()" class="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/40 rounded-xl text-xs font-bold w-full transition">
+            🗑️ Reset Student Data & Scores
+          </button>
+        </div>
+      </div>
+
+      <div class="flex justify-end pt-2">
+        <button onclick="closeTeacherModal()" class="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs transition">
+          Close Dashboard
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    /* =========================================================================
+       1. GLOBAL STATE & DATASETS
+       ========================================================================= */
+    const state = {
+      score: 0,
+      currentLevel: 1,
+      currentQuestionIndex: 0,
+      soundEnabled: true,
+      cameraEnabled: true,
+      inputMode: 'camera', // 'camera' or 'click'
+      rescuedCount: 0,
+      totalQuestions: 8,
+      attempts: 0,
+      words: [],
+      errors: [],
+      stats: {
+        capCorrect: 0, capTotal: 0,
+        fsCorrect: 0, fsTotal: 0,
+        commaCorrect: 0, commaTotal: 0,
+        qmCorrect: 0, qmTotal: 0,
+        independentWritingScore: 0
+      },
+      currentGesture: 'NONE',
+      gestureDebounceTimer: null,
+      gestureHoldCount: 0,
+      selectedWordIndex: 0
+    };
+
+    // Year 5 English DSKP aligned Rescue Missions
+    const MISSION_DATASET = [
+      { id:1, level:1, brokenText: "last Sunday I went to the park with my family.", correctText: "Last Sunday, I went to the park with my family.", prompt: "OH NO! This sentence starts with a small letter and is missing a comma after the time phrase!", guidedTask: "Write a sentence about your family that starts with a time phrase (for example, Last Sunday,) and use a comma after it." },
+      { id:2, level:1, brokenText: "We visited the zoo", correctText: "We visited the zoo.", prompt: "OH NO! The full stop is missing at the end!", guidedTask: "Write a sentence about an animal with a full stop at the end." },
+      { id:3, level:2, brokenText: "I bought apples bananas oranges and grapes.", correctText: "I bought apples, bananas, oranges, and grapes.", prompt: "OH NO! Items in this list need commas, including a comma before 'and' (the Oxford comma)!", guidedTask: "Write your own sentence listing 3 items you like. Use commas, including one before 'and'." },
+      { id:4, level:2, brokenText: "do you like swimming.", correctText: "Do you like swimming?", prompt: "OH NO! This is a question, and it has more than one error!", guidedTask: "Write a question asking your friend about their hobby." },
+      { id:5, level:2, brokenText: "my favourite animals are cats and dogs", correctText: "My favourite animals are cats and dogs.", prompt: "RESCUE NEEDED! Fix the start AND the end!", guidedTask: "Write a sentence starting with a Capital Letter." },
+      { id:6, level:3, brokenText: "where do you live.", correctText: "Where do you live?", prompt: "EMERGENCY! Is this a question or a statement?", guidedTask: "Write a question starting with 'Where' or 'What'." },
+      { id:7, level:3, brokenText: "i like football badminton and swimming", correctText: "I like football, badminton, and swimming.", prompt: "TRIPLE RESCUE! Capital, commas (with an Oxford comma) and full stop are missing!", guidedTask: "Write a list of 3 sports or games you enjoy." },
+      { id:8, level:3, brokenText: "last weekend I went to the market I bought apples bananas and oranges", correctText: "Last weekend, I went to the market. I bought apples, bananas, and oranges.", prompt: "MAJOR EMERGENCY! This paragraph needs many repairs!", guidedTask: "Write 2 short sentences about what you bought or did recently." }
+    ];
+
+    /* =========================================================================
+       2. PUNCTUATION DERIVATION & HELPER FUNCTIONS
+       ========================================================================= */
+    const PUNCT = { '.': 'FULL_STOP', ',': 'COMMA', '?': 'QUESTION' };
+    const MARK = { FULL_STOP: '.', COMMA: ',', QUESTION: '?' };
+    const STAT_KEY = { CAPITAL: 'cap', FULL_STOP: 'fs', COMMA: 'comma', QUESTION: 'qm' };
+
+    function deriveErrors(broken, correct) {
+      const b = broken.split(' ');
+      const c = correct.split(' ');
+      const errs = [];
+      c.forEach((cw, i) => {
+        const bw = b[i] || '';
+        if (/^[A-Z]/.test(cw) && !/^[A-Z]/.test(bw)) {
+          errs.push({ index: i, type: 'CAPITAL', fixed: false });
+        }
+        const cp = (cw.match(/[.,?!]$/) || [''])[0];
+        const bp = (bw.match(/[.,?!]$/) || [''])[0];
+        if (cp && cp !== bp && PUNCT[cp]) {
+          errs.push({ index: i, type: PUNCT[cp], fixed: false });
+        }
+      });
+      return errs;
+    }
+
+    /* =========================================================================
+       3. WEB AUDIO API SYNTHESIZER
+       ========================================================================= */
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    function playSound(type) {
+      if (!state.soundEnabled) return;
+      initAudio();
+      if (!audioCtx) return;
+
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      if (type === 'correct') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(523.25, now); // C5
+        osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.1); // E5
+        osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.25); // G5
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+        osc.start(now);
+        osc.stop(now + 0.4);
+      } else if (type === 'incorrect') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(220, now); // A3
+        osc.frequency.exponentialRampToValueAtTime(164.81, now + 0.25); // E3
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      } else if (type === 'click') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(400, now);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+        osc.start(now);
+        osc.stop(now + 0.08);
+      } else if (type === 'complete') {
+        [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+          const o = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          o.connect(g);
+          g.connect(audioCtx.destination);
+          o.frequency.setValueAtTime(freq, now + i * 0.08);
+          g.gain.setValueAtTime(0.2, now + i * 0.08);
+          g.gain.exponentialRampToValueAtTime(0.01, now + 0.6 + i * 0.08);
+          o.start(now + i * 0.08);
+          o.stop(now + 0.6 + i * 0.08);
+        });
+      }
+    }
+
+    function toggleAudio() {
+      state.soundEnabled = !state.soundEnabled;
+      document.getElementById('sound-icon').textContent = state.soundEnabled ? '🔊' : '🔇';
+      playSound('click');
+    }
+
+    function toggleAudioFromTeacher(val) {
+      state.soundEnabled = val;
+      document.getElementById('sound-icon').textContent = val ? '🔊' : '🔇';
+    }
+
+    /* =========================================================================
+       4. NAVIGATION & UI CONTROLS
+       ========================================================================= */
+    function showScreen(screenId) {
+      playSound('click');
+      ['start-screen', 'game-screen', 'final-mission-screen', 'results-screen'].forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+      });
+      document.getElementById(screenId).classList.remove('hidden');
+
+      if (screenId === 'game-screen') {
+        document.getElementById('top-stats-bar').classList.remove('hidden');
+        if (state.inputMode === 'camera') {
+          startCamera();
+        }
+      } else if (screenId === 'start-screen') {
+        document.getElementById('top-stats-bar').classList.add('hidden');
+      }
+    }
+
+    function selectLevel(lvl) {
+      playSound('click');
+      state.currentLevel = lvl;
+      document.querySelectorAll('.level-select-btn').forEach((btn, idx) => {
+        if (idx + 1 === lvl) {
+          btn.classList.add('border-emerald-500', 'bg-emerald-950/40');
+          btn.classList.remove('border-slate-700', 'bg-slate-900/50');
+        } else {
+          btn.classList.remove('border-emerald-500', 'bg-emerald-950/40');
+          btn.classList.add('border-slate-700', 'bg-slate-900/50');
+        }
+      });
+    }
+
+    function toggleInputMode() {
+      playSound('click');
+      if (state.inputMode === 'camera') {
+        state.inputMode = 'click';
+        document.getElementById('mode-icon').textContent = '🖱️';
+        document.getElementById('mode-text').textContent = 'Click Mode';
+        document.getElementById('camera-disabled-overlay').classList.remove('hidden');
+      } else {
+        state.inputMode = 'camera';
+        document.getElementById('mode-icon').textContent = '📷';
+        document.getElementById('mode-text').textContent = 'Camera Mode';
+        document.getElementById('camera-disabled-overlay').classList.add('hidden');
+        startCamera();
+      }
+    }
+
+    /* =========================================================================
+       5. GAME ENGINE & SENTENCE RESCUE LOGIC
+       ========================================================================= */
+    function startMission() {
+      state.attempts = 0;
+      state.score = 0;
+      state.rescuedCount = 0;
+      state.currentQuestionIndex = 0;
+      state.stats = {
+        capCorrect: 0, capTotal: 0,
+        fsCorrect: 0, fsTotal: 0,
+        commaCorrect: 0, commaTotal: 0,
+        qmCorrect: 0, qmTotal: 0,
+        independentWritingScore: 0
+      };
+      updateStatsUI();
+      loadCurrentQuestion();
+      showScreen('game-screen');
+    }
+
+    function loadCurrentQuestion() {
+      const q = MISSION_DATASET[state.currentQuestionIndex];
+      state.words = q.brokenText.split(' ');
+      state.errors = deriveErrors(q.brokenText, q.correctText);
+      state.selectedWordIndex = 0;
+
+      document.getElementById('mission-tag').textContent = `MISSION ${state.currentQuestionIndex + 1} / ${state.totalQuestions}`;
+      document.getElementById('mission-progress-text').textContent = `${state.currentQuestionIndex + 1} / ${state.totalQuestions}`;
+      const pct = ((state.currentQuestionIndex + 1) / state.totalQuestions) * 100;
+      document.getElementById('mission-progress-bar').style.width = `${pct}%`;
+      document.getElementById('difficulty-indicator').textContent = `Level ${q.level}`;
+      
+      const targetMap = {
+        'CAPITAL': 'Capital Letter ☝️',
+        'FULL_STOP': 'Full Stop ✊',
+        'COMMA': 'Comma ✌️',
+        'QUESTION': 'Question Mark 👍'
+      };
+      const activeErrTypes = [...new Set(state.errors.map(e => e.type))];
+      const targetText = activeErrTypes.map(t => targetMap[t] || t).join(' & ');
+      document.getElementById('target-punctuation-badge').textContent = targetText ? `Target: ${targetText}` : 'Target: Repair Sentence';
+
+      document.getElementById('emergency-prompt').textContent = q.prompt;
+      renderSentenceWords();
+
+      document.getElementById('guided-writing-card').classList.add('hidden');
+      document.getElementById('guided-feedback').classList.add('hidden');
+      document.getElementById('guided-user-input').value = '';
+
+      const fb = document.getElementById('game-feedback-banner');
+      fb.classList.add('hidden');
+    }
+
+    function renderSentenceWords() {
+      const container = document.getElementById('sentence-words-container');
+      container.innerHTML = '';
+      state.words.forEach((word, index) => {
+        const span = document.createElement('span');
+        span.className = 'px-2 py-1 rounded-lg border border-transparent hover:border-amber-400/50 hover:bg-slate-800 transition cursor-pointer flex items-center gap-0.5';
+        if (index === state.selectedWordIndex) {
+          span.classList.add('bg-amber-500/20', 'border-amber-400', 'text-amber-300');
+        }
+        span.textContent = word;
+        span.onclick = () => selectWord(index);
+        container.appendChild(span);
+      });
+    }
+
+    function selectWord(idx) {
+      state.selectedWordIndex = idx;
+      renderSentenceWords();
+      playSound('click');
+    }
+
+    function applyPunctuationAction(action) {
+      if (state.errors.length && state.errors.every(e => e.fixed)) return;
+
+      const i = state.selectedWordIndex;
+      const key = STAT_KEY[action];
+      const hit = state.errors.find(e => !e.fixed && e.type === action && e.index === i);
+
+      state.attempts++;
+      if (key) state.stats[key + 'Total']++;
+
+      const fbBanner = document.getElementById('game-feedback-banner');
+      const fbIcon = document.getElementById('feedback-icon');
+      const fbText = document.getElementById('feedback-text');
+
+      fbBanner.classList.remove('hidden', 'bg-emerald-950/80', 'border-emerald-500', 'bg-rose-950/80', 'border-rose-500');
+
+      if (hit) {
+        hit.fixed = true;
+        if (key) state.stats[key + 'Correct']++;
+        state.score += 20;
+
+        let w = state.words[i];
+        if (action === 'CAPITAL') {
+          w = w[0].toUpperCase() + w.slice(1);
+        } else {
+          w = w.replace(/[.,?!]$/, '') + MARK[action];
+        }
+        state.words[i] = w;
+        renderSentenceWords();
+
+        const left = state.errors.filter(e => !e.fixed).length;
+        fbBanner.classList.add('bg-emerald-950/80', 'border-emerald-500', 'text-emerald-300');
+
+        if (left === 0) {
+          playSound('correct');
+          state.rescuedCount++;
+          fbIcon.textContent = '🎉';
+          fbText.innerHTML = '<strong>Great rescue!</strong> You fixed all errors in this sentence!';
+          setTimeout(() => showGuidedWritingCard(MISSION_DATASET[state.currentQuestionIndex]), 800);
+        } else {
+          playSound('correct');
+          fbIcon.textContent = '👏';
+          fbText.innerHTML = `<strong>Good fix!</strong> ${left} error(s) remaining in this sentence!`;
+        }
+      } else {
+        playSound('incorrect');
+        state.score = Math.max(0, state.score - 5);
+        const left = state.errors.filter(e => !e.fixed).length;
+        fbBanner.classList.add('bg-rose-950/80', 'border-rose-500', 'text-rose-300');
+        fbIcon.textContent = '🔎';
+        fbText.innerHTML = `<strong>Almost there!</strong> Not quite right for the selected word. Select a different word or action! (${left} error(s) left)`;
+      }
+
+      updateStatsUI();
+    }
+
+    /* =========================================================================
+       6. GUIDED WRITING ("NOW YOU TRY!") STEP
+       ========================================================================= */
+    function showGuidedWritingCard(question) {
+      const guidedCard = document.getElementById('guided-writing-card');
+      guidedCard.classList.remove('hidden');
+      document.getElementById('guided-prompt-text').textContent = question.guidedTask;
+      guidedCard.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function submitGuidedWriting() {
+      const val = document.getElementById('guided-user-input').value.trim();
+      const fb = document.getElementById('guided-feedback');
+      fb.classList.remove('hidden');
+
+      if (val.length < 5) {
+        playSound('incorrect');
+        fb.className = 'p-3 rounded-xl bg-rose-950/80 border border-rose-500 text-rose-300 text-xs';
+        fb.innerHTML = '⚠️ Please write a complete sentence!';
+        return;
+      }
+
+      const startsWithCapital = /^[A-Z]/.test(val);
+      const endsWithPunctuation = /[.!?]$/.test(val);
+
+      if (startsWithCapital && endsWithPunctuation) {
+        playSound('correct');
+        state.score += 15;
+        fb.className = 'p-3 rounded-xl bg-emerald-950/80 border border-emerald-500 text-emerald-300 text-xs space-y-1';
+        fb.innerHTML = '✅ <strong>Awesome writing!</strong> You used a capital letter and ending punctuation correctly!';
+
+        setTimeout(() => {
+          nextQuestion();
+        }, 1500);
+      } else {
+        playSound('incorrect');
+        fb.className = 'p-3 rounded-xl bg-amber-950/80 border border-amber-500 text-amber-300 text-xs space-y-1';
+        let tip = 'Remember to: ';
+        if (!startsWithCapital) tip += 'Start with a CAPITAL letter. ';
+        if (!endsWithPunctuation) tip += 'End with a full stop or question mark.';
+        fb.innerHTML = `🔎 <strong>Almost right!</strong> ${tip}`;
+      }
+
+      updateStatsUI();
+    }
+
+    function nextQuestion() {
+      state.currentQuestionIndex++;
+      if (state.currentQuestionIndex >= state.totalQuestions) {
+        showScreen('final-mission-screen');
+      } else {
+        loadCurrentQuestion();
+      }
+    }
+
+    /* =========================================================================
+       7. FINAL INDEPENDENT WRITING EVALUATOR
+       ========================================================================= */
+    function evaluateFinalWriting() {
+      const text = document.getElementById('final-writing-input').value.trim();
+      const evalBox = document.getElementById('final-eval-box');
+      const evalDetails = document.getElementById('final-eval-details');
+
+      if (text.length < 20) {
+        playSound('incorrect');
+        evalBox.classList.remove('hidden');
+        evalDetails.innerHTML = '<span class="text-rose-400">⚠️ Please write at least 3 to 5 sentences before submitting!</span>';
+        return;
+      }
+
+      const sentences = text.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 0);
+      
+      let capitalCount = 0;
+      let endPunctCount = 0;
+      let commaCount = (text.match(/,/g) || []).length;
+
+      sentences.forEach(s => {
+        if (/^[A-Z]/.test(s.trim())) capitalCount++;
+        if (/[.!?]$/.test(s.trim())) endPunctCount++;
+      });
+
+      const capPct = Math.round((capitalCount / Math.max(1, sentences.length)) * 100);
+      const endPct = Math.round((endPunctCount / Math.max(1, sentences.length)) * 100);
+
+      const writingScore = Math.min(100, Math.round((capPct + endPct) / 2 + (commaCount > 0 ? 10 : 0)));
+      state.stats.independentWritingScore = writingScore;
+
+      playSound('complete');
+      showResultsScreen();
+    }
+
+    /* =========================================================================
+       8. RESULTS & STATS UPDATE
+       ========================================================================= */
+    function updateStatsUI() {
+      document.getElementById('score-display').textContent = state.score;
+      document.getElementById('rescued-count-display').textContent = `${state.rescuedCount} / ${state.totalQuestions}`;
+
+      const s = state.stats;
+      const hits = s.capCorrect + s.fsCorrect + s.commaCorrect + s.qmCorrect;
+      const totals = s.capTotal + s.fsTotal + s.commaTotal + s.qmTotal;
+      const accuracy = totals > 0 ? Math.round((hits / totals) * 100) : 100;
+      
+      document.getElementById('accuracy-display').textContent = `${accuracy}%`;
+
+      saveToLocalStorage();
+    }
+
+    function showResultsScreen() {
+      showScreen('results-screen');
+
+      document.getElementById('res-score').textContent = state.score;
+      document.getElementById('res-rescued').textContent = `${state.rescuedCount} / ${state.totalQuestions}`;
+      
+      const s = state.stats;
+      const hits = s.capCorrect + s.fsCorrect + s.commaCorrect + s.qmCorrect;
+      const totals = s.capTotal + s.fsTotal + s.commaTotal + s.qmTotal;
+      const overallAcc = totals > 0 ? Math.round((hits / totals) * 100) : 100;
+
+      document.getElementById('res-accuracy').textContent = `${overallAcc}%`;
+      document.getElementById('res-writing').textContent = `${state.stats.independentWritingScore || 85}%`;
+
+      const capAcc = s.capTotal ? Math.round((s.capCorrect / s.capTotal) * 100) : 100;
+      const fsAcc = s.fsTotal ? Math.round((s.fsCorrect / s.fsTotal) * 100) : 100;
+      const commaAcc = s.commaTotal ? Math.round((s.commaCorrect / s.commaTotal) * 100) : 100;
+      const qmAcc = s.qmTotal ? Math.round((s.qmCorrect / s.qmTotal) * 100) : 100;
+
+      document.getElementById('stat-cap-acc').textContent = `${capAcc}%`;
+      document.getElementById('bar-cap-acc').style.width = `${capAcc}%`;
+
+      document.getElementById('stat-fs-acc').textContent = `${fsAcc}%`;
+      document.getElementById('bar-fs-acc').style.width = `${fsAcc}%`;
+
+      document.getElementById('stat-comma-acc').textContent = `${commaAcc}%`;
+      document.getElementById('bar-comma-acc').style.width = `${commaAcc}%`;
+
+      document.getElementById('stat-qm-acc').textContent = `${qmAcc}%`;
+      document.getElementById('bar-qm-acc').style.width = `${qmAcc}%`;
+
+      document.getElementById('teacher-cap-acc').textContent = `${capAcc}%`;
+      document.getElementById('teacher-fs-acc').textContent = `${fsAcc}%`;
+      document.getElementById('teacher-comma-acc').textContent = `${commaAcc}%`;
+      document.getElementById('teacher-qm-acc').textContent = `${qmAcc}%`;
+      document.getElementById('teacher-writing-acc').textContent = `${state.stats.independentWritingScore || 85}%`;
+    }
+
+    /* =========================================================================
+       9. MEDIAPIPE HAND GESTURE RECOGNITION
+       ========================================================================= */
+    let camera = null;
+    let hands = null;
+
+    function startCamera() {
+      if (camera || state.inputMode === 'click') return;
+
+      const videoElement = document.getElementById('webcam');
+      const canvasElement = document.getElementById('output-canvas');
+      const canvasCtx = canvasElement.getContext('2d');
+
+      hands = new Hands({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+      });
+
+      hands.setOptions({
+        maxNumHands: 1,
+        modelComplexity: 1,
+        minDetectionConfidence: 0.65,
+        minTrackingConfidence: 0.65
+      });
+
+      hands.onResults((results) => {
+        canvasCtx.save();
+        canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+        canvasCtx.filter = 'brightness(1.15) contrast(1.05)';
+        canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+        const statusBadge = document.getElementById('hand-status-badge');
+
+        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+          statusBadge.textContent = '🖐️ HAND DETECTED';
+          statusBadge.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+
+          const landmarks = results.multiHandLandmarks[0];
+          drawHandSkeleton(canvasCtx, landmarks, canvasElement.width, canvasElement.height);
+
+          const gesture = analyzeGesture(landmarks);
+          handleDetectedGesture(gesture);
+
+        } else {
+          statusBadge.textContent = '🔎 SEARCHING HAND...';
+          statusBadge.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40';
+          updateGestureText('✋ Waiting for Hand...');
+        }
+
+        canvasCtx.restore();
+      });
+
+      camera = new Camera(videoElement, {
+        onFrame: async () => {
+          try {
+            await hands.send({ image: videoElement });
+          } catch (err) {
+            // Hand model could not load in this environment: fall back to click mode
+            if (state.inputMode !== 'click') {
+              state.inputMode = 'click';
+              document.getElementById('camera-disabled-overlay').classList.remove('hidden');
+              document.getElementById('mode-icon').textContent = '🖱️';
+              document.getElementById('mode-text').textContent = 'Click Mode';
+              try { camera.stop(); } catch (e2) {}
+              camera = null;
+            }
+          }
+        },
+        width: 640,
+        height: 480
+      });
+
+      camera.start().catch((err) => {
+        console.warn('Camera access denied or unequipped:', err);
+        state.inputMode = 'click';
+        document.getElementById('camera-disabled-overlay').classList.remove('hidden');
+      });
+    }
+
+    function drawHandSkeleton(ctx, landmarks, w, h) {
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 3;
+      ctx.fillStyle = '#f59e0b';
+
+      landmarks.forEach((pt) => {
+        const x = pt.x * w;
+        const y = pt.y * h;
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, 2 * Math.PI);
+        ctx.fill();
+      });
+    }
+
+    function analyzeGesture(lm) {
+      const isIndexExtended = lm[8].y < lm[6].y - 0.03;
+      const isMiddleExtended = lm[12].y < lm[10].y - 0.03;
+      const isRingExtended = lm[16].y < lm[14].y - 0.03;
+      const isPinkyExtended = lm[20].y < lm[18].y - 0.03;
+
+      const isThumbUp = (lm[4].y < lm[2].y - 0.08) && !isIndexExtended && !isMiddleExtended && !isRingExtended && !isPinkyExtended;
+
+      if (isThumbUp) return 'QUESTION';
+      if (isIndexExtended && isMiddleExtended && !isRingExtended && !isPinkyExtended) return 'COMMA';
+      if (isIndexExtended && !isMiddleExtended && !isRingExtended && !isPinkyExtended) return 'CAPITAL';
+      if (!isIndexExtended && !isMiddleExtended && !isRingExtended && !isPinkyExtended && !isThumbUp) return 'FULL_STOP';
+
+      return 'UNKNOWN';
+    }
+
+    function handleDetectedGesture(gesture) {
+      const gestureMap = {
+        'CAPITAL': '☝️ 1 Finger (Capital Letter)',
+        'FULL_STOP': '✊ Closed Fist (Full Stop)',
+        'COMMA': '✌️ 2 Fingers (Comma)',
+        'QUESTION': '👍 Thumbs Up (Question Mark)',
+        'UNKNOWN': '✋ Hand Detected'
+      };
+
+      updateGestureText(gestureMap[gesture] || '✋ Hand Detected');
+
+      if (gesture !== 'UNKNOWN' && gesture !== state.currentGesture) {
+        state.currentGesture = gesture;
+        state.gestureHoldCount = 0;
+      } else if (gesture === state.currentGesture && gesture !== 'UNKNOWN') {
+        state.gestureHoldCount++;
+
+        if (state.gestureHoldCount === 12) {
+          applyPunctuationAction(gesture);
+        }
+      }
+    }
+
+    function updateGestureText(txt) {
+      document.getElementById('detected-action-text').textContent = txt;
+    }
+
+    /* =========================================================================
+       10. TEACHER MODE & STORAGE HELPERS
+       ========================================================================= */
+    function openTeacherModal() {
+      playSound('click');
+      document.getElementById('teacher-modal').classList.remove('hidden');
+    }
+
+    function closeTeacherModal() {
+      playSound('click');
+      document.getElementById('teacher-modal').classList.add('hidden');
+    }
+
+    function toggleCameraFromTeacher(enabled) {
+      state.cameraEnabled = enabled;
+      if (!enabled && state.inputMode === 'camera') {
+        toggleInputMode();
+      } else if (enabled && state.inputMode === 'click') {
+        toggleInputMode();
+      }
+    }
+
+    function saveToLocalStorage() {
+      try {
+        localStorage.setItem('punctuation_rescue_data', JSON.stringify({
+          score: state.score,
+          stats: state.stats,
+          rescuedCount: state.rescuedCount
+        }));
+      } catch (e) {
+        console.warn('LocalStorage save error:', e);
+      }
+    }
+
+    function resetStudentData() {
+      playSound('click');
+      state.score = 0;
+      state.rescuedCount = 0;
+      state.attempts = 0;
+      state.stats = {
+        capCorrect: 0, capTotal: 0,
+        fsCorrect: 0, fsTotal: 0,
+        commaCorrect: 0, commaTotal: 0,
+        qmCorrect: 0, qmTotal: 0,
+        independentWritingScore: 0
+      };
+      try { localStorage.removeItem('punctuation_rescue_data'); } catch (e) {}
+      updateStatsUI();
+      showResultsScreen();
+      alertCustom('Data and scores have been reset successfully.');
+    }
+
+    function alertCustom(msg) {
+      const banner = document.createElement('div');
+      banner.className = 'fixed bottom-5 right-5 bg-amber-500 text-slate-950 px-5 py-3 rounded-2xl font-bold shadow-2xl z-50 transition-all';
+      banner.textContent = msg;
+      document.body.appendChild(banner);
+      setTimeout(() => banner.remove(), 2500);
+    }
+
+    window.onload = function() {
+      try {
+        const saved = localStorage.getItem('punctuation_rescue_data');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          state.score = parsed.score || 0;
+          state.stats = parsed.stats || state.stats;
+          state.rescuedCount = parsed.rescuedCount || 0;
+          updateStatsUI();
+        }
+      } catch (e) {
+        console.warn('Could not restore stored session.');
+      }
+    };
+  </script>
+</body>
+</html>
